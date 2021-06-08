@@ -1,7 +1,8 @@
+import { Statement } from "./../entities/Statement";
 import { getRepository, Repository } from "typeorm";
 
-import { Statement } from "../entities/Statement";
 import { ICreateStatementDTO } from "../useCases/createStatement/ICreateStatementDTO";
+import { ITransferDTO } from "../useCases/createStatement/ITransferDTO";
 import { IGetBalanceDTO } from "../useCases/getBalance/IGetBalanceDTO";
 import { IGetStatementOperationDTO } from "../useCases/getStatementOperation/IGetStatementOperationDTO";
 import { IStatementsRepository } from "./IStatementsRepository";
@@ -14,12 +15,14 @@ export class StatementsRepository implements IStatementsRepository {
   }
 
   async create({
+    sender_id,
     user_id,
     amount,
     description,
     type,
   }: ICreateStatementDTO): Promise<Statement> {
     const statement = this.repository.create({
+      sender_id,
       user_id,
       amount,
       description,
@@ -49,10 +52,14 @@ export class StatementsRepository implements IStatementsRepository {
     });
 
     const balance = statement.reduce((acc, operation) => {
-      if (operation.type === "deposit") {
-        return acc + operation.amount;
+      if (
+        operation.type === "deposit" ||
+        (operation.type === "transfer" && operation.sender_id !== user_id)
+      ) {
+        return acc + Math.floor(operation.amount);
       }
-      return acc - operation.amount;
+
+      return acc - Math.floor(operation.amount);
     }, 0);
 
     if (with_statement) {
@@ -63,5 +70,34 @@ export class StatementsRepository implements IStatementsRepository {
     }
 
     return { balance };
+  }
+
+  async transfer({
+    sender_id,
+    receiver_id,
+    amount,
+    description,
+    type,
+  }: ITransferDTO): Promise<Statement> {
+    const statementReceiver = this.repository.create({
+      user_id: receiver_id,
+      sender_id,
+      amount,
+      description,
+      type,
+    });
+
+    const statementSender = this.repository.create({
+      user_id: sender_id,
+      sender_id,
+      amount,
+      description,
+      type,
+    });
+
+    this.repository.save(statementSender);
+    this.repository.save(statementReceiver);
+
+    return statementSender;
   }
 }

@@ -1,5 +1,6 @@
 import { Statement } from "../entities/Statement";
 import { ICreateStatementDTO } from "../useCases/createStatement/ICreateStatementDTO";
+import { ITransferDTO } from "../useCases/createStatement/ITransferDTO";
 import { IGetBalanceDTO } from "../useCases/getBalance/IGetBalanceDTO";
 import { IGetStatementOperationDTO } from "../useCases/getStatementOperation/IGetStatementOperationDTO";
 
@@ -13,4 +14,5 @@ export interface IStatementsRepository {
   ) => Promise<
     { balance: number } | { balance: number; statement: Statement[] }
   >;
+  transfer(data: ITransferDTO): Promise<Statement>;
 }
